@@ -61,10 +61,11 @@
             }, 500);
         },
         
-        // Secure network requests with retry logic
+        // Secure network requests with retry logic and timeout
         _secureRequest: async function(url, options = {}, retryCount = 0) {
             const maxRetries = 3;
             const retryDelay = 1000; // 1 second
+            const timeout = 30000; // 30 seconds
             
             const headers = {
                 'Content-Type': 'application/json',
@@ -75,16 +76,24 @@
             };
             
             try {
-                const response = await fetch(url, {
+                // Create timeout promise
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Request timeout')), timeout);
+                });
+                
+                // Create fetch promise
+                const fetchPromise = fetch(url, {
                     ...options,
                     headers,
                     mode: 'cors',
                     cache: 'no-cache',
-                    credentials: 'omit'  // Don't send credentials for CORS
+                    credentials: 'omit'
                 });
                 
+                // Race between fetch and timeout
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
+                
                 if (!response.ok) {
-                    // Handle specific error codes
                     if (response.status === 429) {
                         throw new Error('レート制限を超えました。しばらくお待ちください。');
                     } else if (response.status === 401) {
@@ -101,14 +110,23 @@
                 return await response.json();
                 
             } catch (error) {
-                // Network error or fetch failed
-                if (error.name === 'TypeError' || error.message.includes('Failed to fetch') || error.message.includes('Load failed')) {
+                // Network error, timeout, or fetch failed
+                if (error.message === 'Request timeout') {
                     if (retryCount < maxRetries) {
-                        console.log(`リトライ中... (${retryCount + 1}/${maxRetries})`);
+                        console.log(`タイムアウト - リトライ中... (${retryCount + 1}/${maxRetries})`);
                         await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
                         return this._secureRequest(url, options, retryCount + 1);
                     }
-                    throw new Error('ネットワーク接続エラー。インターネット接続を確認してください。');
+                    throw new Error('サーバーの応答がタイムアウトしました（30秒）');
+                }
+                
+                if (error.name === 'TypeError' || error.message.includes('Failed to fetch') || error.message.includes('Load failed') || error.message.includes('NetworkError')) {
+                    if (retryCount < maxRetries) {
+                        console.log(`ネットワークエラー - リトライ中... (${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
+                        return this._secureRequest(url, options, retryCount + 1);
+                    }
+                    throw new Error('FAILED_FETCH');
                 }
                 
                 throw error;
@@ -498,8 +516,46 @@
                 await this._showChallenge(container);
             } catch (error) {
                 checkbox.classList.remove('checked');
-                this._handleError(error.message, container);
+                
+                // Check if it's a FAILED_FETCH error - auto reload
+                if (error.message === 'FAILED_FETCH' || error.message.includes('Failed to fetch') || error.message.includes('Load failed')) {
+                    console.log('🔄 Failed Fetch detected - Auto reloading CAPTCHA...');
+                    
+                    // Show loading for 2 seconds before retry
+                    const captchaDiv = container.querySelector('.adv-captcha');
+                    captchaDiv.innerHTML = `
+                        <div class="adv-captcha-challenge">
+                            <div class="adv-captcha-error">
+                                接続エラーが発生しました<br>
+                                自動的に再読み込みしています...
+                            </div>
+                            <div class="adv-captcha-loading" style="margin-top: 15px;">
+                                <div class="adv-captcha-spinner"></div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Wait 2 seconds then reload
+                    setTimeout(() => {
+                        this._reloadCaptcha(container);
+                    }, 2000);
+                } else {
+                    this._handleError(error.message, container);
+                }
             }
+        }
+        
+        // 🔄 Reload entire CAPTCHA widget
+        _reloadCaptcha(container) {
+            console.log('🔄 Reloading CAPTCHA widget...');
+            
+            // Clear state
+            this.state.licenseKey = null;
+            this.state.currentChallenge = null;
+            this.state.isLoading = false;
+            
+            // Recreate widget
+            this._createWidget(container);
         }
 
         // 🎯 Show challenge (text, number, math, or audio)
@@ -548,13 +604,37 @@
             } catch (error) {
                 console.error('Challenge error:', error);
                 
-                // User-friendly error message
+                // Check if it's a FAILED_FETCH error - auto reload entire CAPTCHA
+                if (error.message === 'FAILED_FETCH' || error.message.includes('Failed to fetch') || error.message.includes('Load failed')) {
+                    console.log('🔄 Failed Fetch detected - Auto reloading entire CAPTCHA...');
+                    
+                    captchaDiv.innerHTML = `
+                        <div class="adv-captcha-challenge">
+                            <div class="adv-captcha-error">
+                                接続エラーが発生しました<br>
+                                CAPTCHAを再読み込みしています...
+                            </div>
+                            <div class="adv-captcha-loading" style="margin-top: 15px;">
+                                <div class="adv-captcha-spinner"></div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Wait 2 seconds then reload entire CAPTCHA
+                    setTimeout(() => {
+                        this._reloadCaptcha(container);
+                    }, 2000);
+                    
+                    return; // Don't show retry button
+                }
+                
+                // User-friendly error message for other errors
                 let errorMessage = 'チャレンジの読み込みに失敗しました。';
                 
                 if (error.message.includes('ネットワーク') || error.message.includes('接続')) {
                     errorMessage = 'ネットワークエラー。接続を確認して再試行してください。';
-                } else if (error.message.includes('Failed to fetch') || error.message.includes('Load failed')) {
-                    errorMessage = 'サーバーに接続できません。ページを再読み込みしてください。';
+                } else if (error.message.includes('タイムアウト')) {
+                    errorMessage = 'サーバーの応答がタイムアウトしました（30秒）。再試行してください。';
                 }
                 
                 this._handleError(errorMessage, container);
@@ -734,12 +814,37 @@
             } catch (error) {
                 console.error('Verification error:', error);
                 
+                // Check if it's a FAILED_FETCH error - auto reload entire CAPTCHA
+                if (error.message === 'FAILED_FETCH' || error.message.includes('Failed to fetch') || error.message.includes('Load failed')) {
+                    console.log('🔄 Failed Fetch during verification - Auto reloading CAPTCHA...');
+                    
+                    const captchaDiv = container.querySelector('.adv-captcha');
+                    captchaDiv.innerHTML = `
+                        <div class="adv-captcha-challenge">
+                            <div class="adv-captcha-error">
+                                接続エラーが発生しました<br>
+                                CAPTCHAを再読み込みしています...
+                            </div>
+                            <div class="adv-captcha-loading" style="margin-top: 15px;">
+                                <div class="adv-captcha-spinner"></div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Wait 2 seconds then reload entire CAPTCHA
+                    setTimeout(() => {
+                        this._reloadCaptcha(container);
+                    }, 2000);
+                    
+                    return;
+                }
+                
                 let errorMessage = '検証に失敗しました。';
                 
                 if (error.message.includes('ネットワーク') || error.message.includes('接続')) {
                     errorMessage = 'ネットワークエラー。もう一度お試しください。';
-                } else if (error.message.includes('Failed to fetch') || error.message.includes('Load failed')) {
-                    errorMessage = 'サーバーに接続できません。ページを再読み込みしてください。';
+                } else if (error.message.includes('タイムアウト')) {
+                    errorMessage = 'サーバーの応答がタイムアウトしました。もう一度お試しください。';
                 }
                 
                 this._showError(container, errorMessage, true);
