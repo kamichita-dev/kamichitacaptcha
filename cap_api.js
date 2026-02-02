@@ -148,7 +148,6 @@
             };
             
             this.state = {
-                licenseKey: null,
                 currentChallenge: null,
                 selectedImages: new Set(),
                 attempts: 0,
@@ -171,42 +170,13 @@
             return 'https://captchaapi.kamichitateam.f5.si';
         }
 
-        // 🔑 License key management with caching and retry
+        // 🔑 No license key needed - removed for simplicity
         async _getLicenseKey() {
-            if (this.state.licenseKey && this._isKeyValid()) {
-                return this.state.licenseKey;
-            }
-            
-            try {
-                const response = await SecurityCore._secureRequest(
-                    `${this.config.apiBase}/api/captcha_licence_key`
-                );
-                
-                if (!response || !response.license_key) {
-                    throw new Error('Invalid response from server');
-                }
-                
-                this.state.licenseKey = response.license_key;
-                this.state.keyExpiry = Date.now() + (response.expires_in * 1000);
-                return this.state.licenseKey;
-            } catch (error) {
-                console.error('License key error:', error);
-                
-                // User-friendly error message
-                let errorMessage = 'ライセンスキーの取得に失敗しました。';
-                
-                if (error.message.includes('ネットワーク')) {
-                    errorMessage = 'ネットワーク接続エラー。インターネット接続を確認してください。';
-                } else if (error.message.includes('Failed to fetch') || error.message.includes('Load failed')) {
-                    errorMessage = 'サーバーに接続できません。しばらくしてから再試行してください。';
-                }
-                
-                throw new Error(errorMessage);
-            }
+            return null; // No license key system
         }
 
         _isKeyValid() {
-            return this.state.keyExpiry && Date.now() < this.state.keyExpiry;
+            return true; // No license key needed
         }
 
         // 🎨 Modern UI with hCaptcha-style design
@@ -550,7 +520,6 @@
             console.log('🔄 Reloading CAPTCHA widget...');
             
             // Clear state
-            this.state.licenseKey = null;
             this.state.currentChallenge = null;
             this.state.isLoading = false;
             
@@ -574,10 +543,9 @@
             `;
             
             try {
-                const licenseKey = await this._getLicenseKey();
+                await this._getLicenseKey(); // Does nothing now
                 
                 const requestBody = {
-                    license_key: licenseKey,
                     domain: window.location.hostname
                 };
                 
@@ -791,8 +759,7 @@
                         method: 'POST',
                         body: JSON.stringify({
                             challenge_id: this.state.currentChallenge.challenge_id,
-                            answer: answer,
-                            license_key: this.state.licenseKey
+                            answer: answer
                         })
                     }
                 );
