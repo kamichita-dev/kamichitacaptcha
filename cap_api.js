@@ -460,7 +460,7 @@
                     <div class="adv-captcha-checkbox-container">
                         <div class="adv-captcha-checkbox" id="captcha-checkbox"></div>
                         <span class="adv-captcha-text">私はロボットではありません</span>
-                        <a href="#" class="adv-captcha-logo" title="Advanced CAPTCHA">SecureCap</a>
+                        <a href="#" class="adv-captcha-logo" title="Advanced CAPTCHA">kamichitaTeam</a>
                     </div>
                 </div>
             `;
