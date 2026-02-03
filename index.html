@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAPTCHA Sample</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .demo-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .demo-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .demo-card p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        .captcha-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .form-demo {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .submit-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .submit-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 Advanced CAPTCHA System</h1>
+            <p>Enterprise-grade security with multiple challenge types</p>
+        </div>
+        
+        <div class="demo-grid">
+            <div class="demo-card">
+                <h3>📝 Text Input</h3>
+                <p>Alphanumeric character recognition</p>
+                <div class="code-block">&lt;div data-captcha data-type="text_input"&gt;&lt;/div&gt;</div>
+                <div class="captcha-container">
+                    <div data-captcha data-type="text_input"></div>
+                </div>
+            </div>
+            
+            <div class="demo-card">
+                <h3>🔢 Number Input</h3>
+                <p>Numeric character recognition</p>
+                <div class="code-block">&lt;div data-captcha data-type="number_input"&gt;&lt;/div&gt;</div>
+                <div class="captcha-container">
+                    <div data-captcha data-type="number_input"></div>
+                </div>
+            </div>
+            
+            <div class="demo-card">
+                <h3>🧮 Math Calculation</h3>
+                <p>Simple arithmetic problems</p>
+                <div class="code-block">&lt;div data-captcha data-type="math_calc"&gt;&lt;/div&gt;</div>
+                <div class="captcha-container">
+                    <div data-captcha data-type="math_calc"></div>
+                </div>
+            </div>
+            
+            <div class="demo-card">
+                <h3>🔊 Audio CAPTCHA</h3>
+                <p>Audio-based number verification</p>
+                <div class="code-block">&lt;div data-captcha data-type="audio"&gt;&lt;/div&gt;</div>
+                <div class="captcha-container">
+                    <div data-captcha data-type="audio"></div>
+                </div>
+            </div>
+            
+            <div class="demo-card">
+                <h3>🎲 Random Type</h3>
+                <p>Randomly selected challenge type</p>
+                <div class="code-block">&lt;div data-captcha&gt;&lt;/div&gt;</div>
+                <div class="captcha-container">
+                    <div data-captcha></div>
+                </div>
+            </div>
+            
+            <div class="demo-card">
+                <h3>⚡ With Callback</h3>
+                <p>Execute function on success</p>
+                <div class="code-block">&lt;div data-captcha data-callback="onSuccess"&gt;&lt;/div&gt;</div>
+                <div class="captcha-container">
+                    <div data-captcha data-type="text_input" data-callback="onCaptchaSuccess"></div>
+                </div>
+                <div id="callback-status" class="status"></div>
+            </div>
+            
+            <div class="demo-card">
+                <h3>📝 Form Integration</h3>
+                <p>Complete form with CAPTCHA verification</p>
+                <div class="form-demo">
+                    <form id="demo-form">
+                        <div class="form-group">
+                            <label>Username:</label>
+                            <input type="text" name="username" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email:</label>
+                            <input type="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label>CAPTCHA Type:</label>
+                            <select id="captcha-type-select">
+                                <option value="">Random</option>
+                                <option value="text_input">Text Input</option>
+                                <option value="number_input">Number Input</option>
+                                <option value="math_calc">Math Calculation</option>
+                                <option value="audio">Audio</option>
+                            </select>
+                        </div>
+                        <div class="captcha-container" id="form-captcha-container"></div>
+                        <button type="submit" class="submit-btn" id="form-submit" disabled>
+                            Submit (CAPTCHA required)
+                        </button>
+                    </form>
+                </div>
+                <div id="form-status" class="status"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="cap_api.js"></script>
+    
+    <script>
+        function onCaptchaSuccess(token) {
+            const statusDiv = document.getElementById('callback-status');
+            statusDiv.className = 'status success';
+            statusDiv.textContent = '✅ Success! Token: ' + token.substring(0, 30) + '...';
+            statusDiv.style.display = 'block';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function onFormCaptchaSuccess(token) {
+            const submitBtn = document.getElementById('form-submit');
+            const statusDiv = document.getElementById('form-status');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit';
+            statusDiv.className = 'status success';
+            statusDiv.textContent = '✅ CAPTCHA verified! You can submit now.';
+            statusDiv.style.display = 'block';
+        }
+        
+        let formCaptchaInstance = null;
+        
+        function loadFormCaptcha(type) {
+            const container = document.getElementById('form-captcha-container');
+            container.innerHTML = '';
+            const captchaDiv = document.createElement('div');
+            container.appendChild(captchaDiv);
+            const options = { callback: onFormCaptchaSuccess };
+            if (type) options.challengeType = type;
+            formCaptchaInstance = AdvancedCaptcha.render(captchaDiv, options);
+        }
+        
+        setTimeout(() => loadFormCaptcha(''), 500);
+        
+        document.getElementById('captcha-type-select').addEventListener('change', function() {
+            document.getElementById('form-submit').disabled = true;
+            document.getElementById('form-submit').textContent = 'Submit (CAPTCHA required)';
+            document.getElementById('form-status').style.display = 'none';
+            loadFormCaptcha(this.value);
+        });
+        
+        document.getElementById('demo-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const token = AdvancedCaptcha.getToken();
+            const statusDiv = document.getElementById('form-status');
+            if (token) {
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '🎉 Form submitted! Token: ' + token.substring(0, 30) + '...';
+            } else {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = '❌ CAPTCHA verification required.';
+            }
+            statusDiv.style.display = 'block';
+            console.log('Form data:', new FormData(this));
+            console.log('CAPTCHA token:', token);
+        });
+    </script>
+</body>
+</html>
