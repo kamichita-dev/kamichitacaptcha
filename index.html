@@ -1,22 +1,44 @@
-<html>
-  <head>
-    <title>BeanShell scripting example</title>
-    <script type="text/javascript" src="http://github.com/vic/jwmscript/tree/master/core/src/main/resources/com/jwmsolutions/jwmscript/applet.js?raw=true"></script>
-    <script type="text/javascript">
-      JWMScript({
-        archive: "http://github.com/vborja/jwmscript-example/tree/master/signed/jwmscript-core-0.0.1.jar?raw=true",
-        types  : ["text/java", "text/beanshell"],
-        setup  : function(scripting) {
-          alert("Setting up JWMScript");
-          scripting.addClassPath("http://github.com/vborja/jwmscript-example/tree/master/signed/bsh-2.0b4.jar?raw=true");
-          var interpreter = scripting.wrapClass("bsh.Interpreter").newInstance();
-          interpreter.set("jwmscript", scripting.getHandle());
-          return function(script) { interpreter.eval(script.innerHTML); };
-        }
-      });
-    </script>
-    <script type="text/beanshell">
-      jwmscript.alert( "Hello World!" );
-    </script>
-  </head>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Hello</title>
+</head>
+<body>
+
+<h1 id="text"></h1>
+
+<script>
+const message = "Hello World";
+const speed = 100;
+const delay = 1500;
+
+let i = 0;
+let isDeleting = false;
+
+function type() {
+  const el = document.getElementById("text");
+
+  if (!isDeleting) {
+    el.textContent = message.substring(0, i++);
+    if (i > message.length) {
+      isDeleting = true;
+      setTimeout(type, delay);
+      return;
+    }
+  } else {
+    el.textContent = message.substring(0, i--);
+    if (i < 0) {
+      isDeleting = false;
+      i = 0;
+    }
+  }
+
+  setTimeout(type, isDeleting ? speed / 2 : speed);
+}
+
+type();
+</script>
+
+</body>
 </html>
